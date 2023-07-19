@@ -16,20 +16,34 @@ namespace Assignment2.Controllers
         {
             _context = context;
         }
-        [HttpGet("{fromdate}/{todate}")]
-        [Produces("text/csv")]
-        public async Task<IActionResult> GetOrderByInterval(DateTime fromdate, DateTime todate)
+        [HttpGet]
+        public async Task<IActionResult> GetOrderByInterval(DateTime? fromdate, DateTime? todate)
         {
-            List<Order> orders = await _context.Orders.Include(o => o.OrderDetails).Where(o => o.OrderDate >= fromdate && o.OrderDate <= todate).ToListAsync();
-            List<OrderDTO> orderDTOs = orders.Select(o => new OrderDTO
+            var orders = await _context.Orders.Include(o => o.OrderDetails).ToListAsync();
+            if (fromdate != null && todate != null)
+            {
+                orders = orders.Where(o => o.OrderDate >= fromdate && o.OrderDate <= todate).ToList();
+            }
+            var result = orders.Select(o => new
             {
                 OrderId = o.OrderId,
                 CustomerId = o.CustomerId,
                 EmployeeId = o.EmployeeId,
-                OrderDate = o.OrderDate.Value.ToShortDateString(),
-                OrderDetails = string.Join(";",o.OrderDetails.Select(od => string.Join(";", od.ProductId, od.Quantity, od.UnitPrice)))
+                OrderDate = o.OrderDate,
+                OrderDetails = o.OrderDetails.Select( od => new
+                {
+                    ProductId = od.ProductId,
+                    Quantity = od.Quantity,
+                    UnitPrice = od.UnitPrice
+                })
             }).ToList();
-            return Ok(orderDTOs);
+            return Ok(result);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateOrder()
+        {
+            return Ok();
         }
     }
 }
